@@ -6,42 +6,62 @@
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Physics thingy</title>
+  <style>
+    body:has(div>div>div>div>input#imageSwitch:checked) img {
+      visibility: hidden;
+    }
+  </style>
 </head>
 <body>
-  <img src="gif.gif" alt="physics thingy" style="position: absolute; top: -50px; width: 1000px; z-index: -1 ">
-  <div style="display: block; height: 300px"></div>
-  <div class="" style="display: flex; flex-direction: row; justify-content: center">
-    <div class="" style="display: flex; flex-direction: row; align-content: center; gap: 1rem">
-      <canvas id="canvas" width="500" height="500" style="border: black solid 2px; padding: 5px"></canvas>
-      <div class="" style="width: 100%">
-        <div style="border: black solid 2px; padding: 5px; margin-bottom: 10px;">
-          <p><strong>rocket 1</strong></p>
-          <label for="angle1">angle:</label>
-          <input type="number" name="" id="angle1" value="90">
-          <span>°</span>
-          <label for="speed1">speed:</label>
-          <input type="number" name="" id="speed1" value="1">
-          <span>px/ms</span>
-        </div>
-        <div style="border: black solid 2px; padding: 5px; margin-bottom: 10px">
-          <p><strong>rocket 2</strong></p>
-          <label for="angle2">angle:</label>
-          <input type="number" name="" id="angle2" value="45">
-          <span>°</span>
-          <label for="speed2">speed:</label>
-          <input type="number" name="" id="speed2" value="0">
-          <span>px/ms</span>
-        </div>
-        <button id="gen">generate!</button>
-        <p id="result"></p>
+<audio id="goofyAhWalking" muted src="audio/0fbca8db08d46419416c0f104345bc53.wav"></audio>
+<audio id="goofyAhSnoring" muted src="audio/5b1a88cd6db7e239642d7ca8a0d74a1a.wav"></audio>
+<audio id="goofyAhBell" muted src="audio/25d61e79cbeba4041eebeaebd7bf9598.wav"></audio>
+<img src="gif.gif" alt="physics thingy" style="position: absolute; top: -50px; width: 1000px; z-index: -1 ">
+<div style="display: block; height: 300px"></div>
+<div class="" style="display: flex; flex-direction: row; justify-content: center">
+  <div class="" style="display: flex; flex-direction: row; align-content: center; gap: 1rem">
+    <canvas id="canvas" width="500" height="500" style="border: black solid 2px; padding: 5px"></canvas>
+    <div class="" style="width: 100%">
+      <div class="">
+        <label for="imageSwitch">Turn off the image:</label>
+        <input type="checkbox" id="imageSwitch">
+        <br>
+        <label for="audioSwitch">turn off the audio</label>
+        <input type="checkbox" id="audioSwitch" checked onclick="document.getElementById('goofyAhBell').muted = this.checked;document.getElementById('goofyAhWalking').muted=this.checked;document.getElementById('goofyAhSnoring').muted = this.checked">
       </div>
+      <div style="border: black solid 2px; padding: 5px; margin-bottom: 10px;">
+        <p><strong>rocket 1</strong></p>
+        <label for="angle1">angle:</label>
+        <input type="number" name="" id="angle1" value="90">
+        <span>°</span>
+        <label for="speed1">speed:</label>
+        <input type="number" name="" id="speed1" value="1">
+        <span>px/ms</span>
+      </div>
+      <div style="border: black solid 2px; padding: 5px; margin-bottom: 10px">
+        <p><strong>rocket 2</strong></p>
+        <label for="angle2">angle:</label>
+        <input type="number" name="" id="angle2" value="45">
+        <span>°</span>
+        <label for="speed2">speed:</label>
+        <input type="number" name="" id="speed2" value="0">
+        <span>px/ms</span>
+      </div>
+      <div class="">
+        <label for="acc-px">minimum accuracy:</label>
+        <input type="number" id="acc-px" value="20">
+        <span>px</span>
+      </div>
+      <button id="gen">generate!</button>
+      <p id="result"></p>
     </div>
   </div>
-  <script>
-    "use strict"
+</div>
+<script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     document.getElementById("speed2").value = 1.41421356
+    let audio;
 
 
     /**
@@ -49,7 +69,7 @@
      * @param {number} angle - the angle of the trajectory, in degrees.
      * @param {number} speed - the speed of movement, in px/ms.
      * @param {{x: number, y:number}} offset - the offset of the trajectories, aka the starting position.
-     * @yields {{angle: number, speed:{x: number, y: number, def: number}, offset: {x: number, y:number}}}
+     * @yields {x: number, y: number, data: {angle: number, speed: {x: number, y: number, def}, offset: {x: number, y: number}}
      */
     function* generateTrajectory(angle, speed, offset = { x: 0, y: 0}) {
         const angleRad = angle * Math.PI / 180;
@@ -72,52 +92,80 @@
         }
     }
 
+    const CANVAS_HEIGHT = canvas.height;
+    const CANVAS_WIDTH = canvas.width;
+
     /**
-     * generates if 2 objects will collide.
-     * don't ask me, I have no idea what this code does.
-     * @param {{angle: number, speed:{x: number, y: number, def: number}, offset: {x: number, y:number}}} data1 - the data of the first trajectory (angles in radians)
-     * @param {{angle: number, speed:{x: number, y: number, def: number}, offset: {x: number, y:number}}} data2 - the data of the second trajectory (angles in radians)
-     * @return {boolean}
+     * Determines if two trajectories will "collide" within a given distance inside the canvas and calculates the hit accuracy.
+     *
+     * @param {{angle: number, speed: {x: number, y: number, def: number}, offset: {x: number, y: number}}} data1 - First trajectory data
+     * @param {{angle: number, speed: {x: number, y: number, def: number}, offset: {x: number, y: number}}} data2 - Second trajectory data
+     * @param {number} collision - Distance within which the collision is considered to occur
+     * @param {number} canvasWidth - The width of the canvas
+     * @param {number} canvasHeight - The height of the canvas
+     * @return {{doesCollide: boolean, accuracy: number}} - Collision status and accuracy
      */
-    function willCollide(data1, data2) {
+    function willCollide(data1, data2, collision, canvasWidth, canvasHeight) {
         const dx = data2.offset.x - data1.offset.x; // Difference in x-offset
         const dvx = data1.speed.x - data2.speed.x; // Difference in x-speeds
 
         // If the trajectories are parallel in x, they will never collide
-        if (dvx === 0) return false;
+        if (dvx === 0) return {doesCollide: false, accuracy: 0};
 
         // Calculate the time for x-coordinates to align
         const tx = dx / dvx;
 
         // If tx is negative, collision would have happened in the past
-        if (tx <= 0) return false;
+        if (tx <= 0) return {doesCollide: false, accuracy: 0};
 
-        // Calculate y-positions at tx
+        // Calculate positions at tx
+        const x1AtTx = data1.offset.x + data1.speed.x * tx;
         const y1AtTx = data1.offset.y + data1.speed.y * tx;
+        const x2AtTx = data2.offset.x + data2.speed.x * tx;
         const y2AtTx = data2.offset.y + data2.speed.y * tx;
 
-        // Check if y-positions align at tx
-        // return [y1AtTx - y2AtTx, y1AtTx, y2AtTx, y1AtTx-y2AtTx < 1e-5]
-        return Math.abs(y1AtTx - y2AtTx) < 1e-5; // Use a small delta for precision
+        console.log(x1AtTx, y1AtTx, x2AtTx, y2AtTx)
+
+        // Check if either position is outside the canvas boundaries
+        if (
+            x1AtTx < -10 || x1AtTx > canvasWidth || y1AtTx < -10 || y1AtTx > canvasHeight ||
+            x2AtTx < -10 || x2AtTx > canvasWidth || y2AtTx < -10 || y2AtTx > canvasHeight
+        ) {
+            return {doesCollide: false, accuracy: 0};
+        }
+
+        // Calculate the Euclidean distance between the two points at tx
+        const distance = Math.sqrt(
+            Math.pow(x1AtTx - x2AtTx, 2) + Math.pow(y1AtTx - y2AtTx, 2)
+        );
+
+        // If the distance exceeds the collision threshold, no collision
+        if (distance > collision) return {doesCollide: false, accuracy: 0};
+
+        // Calculate accuracy as a percentage
+        const accuracy = 1 - distance / collision;
+
+        return {doesCollide: true, accuracy};
     }
 
 
-    const CANVAS_HEIGHT = canvas.height;
-    const CANVAS_WIDTH = canvas.width;
-
-
     document.getElementById("gen").addEventListener("click", () => {
+        audio = document.getElementById("goofyAhWalking")
+        audio.play()
+        const MIN_ACC = parseFloat(document.getElementById("acc-px").value)
         const ANGLE1 = parseFloat(document.getElementById("angle1").value)
         const ANGLE2 = parseFloat(document.getElementById("angle2").value)
         const SPEED1 = parseFloat(document.getElementById("speed1").value)
         const SPEED2 = parseFloat(document.getElementById("speed2").value)
         document.getElementById("gen").disabled = "true"
-        const gen1 = generateTrajectory(360-ANGLE1, SPEED1, {x: 0, y: CANVAS_HEIGHT});
-        const gen2 = generateTrajectory(180+ ANGLE2, SPEED2, {x: CANVAS_WIDTH, y: CANVAS_HEIGHT});
+
+        const gen1 = generateTrajectory(360 - ANGLE1, SPEED1, {x: 0, y: CANVAS_HEIGHT});
+        const gen2 = generateTrajectory(180 + ANGLE2, SPEED2, {x: CANVAS_WIDTH, y: CANVAS_HEIGHT});
         ctx.beginPath()
         canvas.width = CANVAS_WIDTH
-        const interval = setInterval(()=>{
-
+        const OutOfBounds = (x, y) => x > CANVAS_WIDTH + 20 || x < -50 || y > CANVAS_HEIGHT + 10 || y < -10
+        const interval = setInterval(() => {
+            // console.log("WHY IS IT GOING SO SLOW?????")
             const newGen1 = gen1.next().value
             const newGen1Data = newGen1.data
             const newGen2 = gen2.next().value
@@ -126,11 +174,17 @@
             //     newGen1,
             //     newGen2
             // )
-            if(newGen1.y > 500 || newGen1.y < 0 || newGen2.y > 500 || newGen2.y < 0 || newGen1.x > 500  || newGen1.x < -50 ||  newGen2.x > 500 || newGen2.x < -50){
+            if (OutOfBounds(newGen1.x, newGen1.y) || OutOfBounds(newGen2.x, newGen2.y)) {
                 document.getElementById("gen").removeAttribute("disabled")
-                document.getElementById("result").innerHTML = willCollide(newGen1Data, newGen2Data) ? "collision!" : "no collision :("
+                const _willCollide = willCollide(newGen1Data, newGen2Data, MIN_ACC, CANVAS_WIDTH+10, CANVAS_HEIGHT+10)
+                audio.pause()
+                document.getElementById("result").innerHTML = _willCollide.doesCollide ? `collision!<br>with ${parseInt((_willCollide.accuracy * 100).toFixed(2)) === 100.00 ? "perfect" : (_willCollide.accuracy * 100).toFixed(2) + "%"} accuracy!` : "no collision :("
+                if(!_willCollide.doesCollide) {
+                    audio = document.getElementById(Math.random() <.2? "goofyAhSnoring" : "goofyAhBell")
+                    audio.play()
+                }
                 // document.getElementById("result").innerHTML = willCollide(newGen1Data, newGen2Data).toString()
-                console.log(willCollide(newGen1Data, newGen2Data).toString())
+                console.log(JSON.stringify(_willCollide))
                 clearInterval(interval)
             }
 
@@ -138,7 +192,7 @@
             ctx.moveTo(1, CANVAS_HEIGHT)
             ctx.lineTo(newGen1.x, newGen1.y)
             ctx.stroke()
-              // beginPath()
+            // beginPath()
             ctx.moveTo(CANVAS_WIDTH, CANVAS_HEIGHT)
             ctx.lineTo(newGen2.x, newGen2.y)
             ctx.stroke()
@@ -149,9 +203,6 @@
         // console.log(newGen1)
         // console.log(willCollide(newGen1Data, newGen2Data))
     })
-
-
-
-  </script>
+</script>
 </body>
 </html>
