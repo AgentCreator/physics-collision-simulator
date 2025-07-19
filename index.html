@@ -114,7 +114,7 @@
         const tx = dx / dvx;
 
 
-        if (tx <= 0) return {doesCollide: false, accuracy: 0};
+        if (tx < 0) return {doesCollide: false, accuracy: 0};
 
         const x1AtTx = data1.offset.x + data1.speed.x * tx;
         const y1AtTx = data1.offset.y + data1.speed.y * tx;
