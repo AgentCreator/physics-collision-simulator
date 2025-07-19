@@ -106,19 +106,16 @@
      * @return {{doesCollide: boolean, accuracy: number}} - Collision status and accuracy
      */
     function willCollide(data1, data2, collision, canvasWidth, canvasHeight) {
-        const dx = data2.offset.x - data1.offset.x; // Difference in x-offset
-        const dvx = data1.speed.x - data2.speed.x; // Difference in x-speeds
+        const dx = data2.offset.x - data1.offset.x;
+        const dvx = data1.speed.x - data2.speed.x; 
 
-        // If the trajectories are parallel in x, they will never collide
         if (dvx === 0) return {doesCollide: false, accuracy: 0};
 
-        // Calculate the time for x-coordinates to align
         const tx = dx / dvx;
 
-        // If tx is negative, collision would have happened in the past
+
         if (tx <= 0) return {doesCollide: false, accuracy: 0};
 
-        // Calculate positions at tx
         const x1AtTx = data1.offset.x + data1.speed.x * tx;
         const y1AtTx = data1.offset.y + data1.speed.y * tx;
         const x2AtTx = data2.offset.x + data2.speed.x * tx;
@@ -126,23 +123,18 @@
 
         console.log(x1AtTx, y1AtTx, x2AtTx, y2AtTx)
 
-        // Check if either position is outside the canvas boundaries
         if (
             x1AtTx < -10 || x1AtTx > canvasWidth || y1AtTx < -10 || y1AtTx > canvasHeight ||
             x2AtTx < -10 || x2AtTx > canvasWidth || y2AtTx < -10 || y2AtTx > canvasHeight
         ) {
             return {doesCollide: false, accuracy: 0};
         }
-
-        // Calculate the Euclidean distance between the two points at tx
         const distance = Math.sqrt(
             Math.pow(x1AtTx - x2AtTx, 2) + Math.pow(y1AtTx - y2AtTx, 2)
         );
-
-        // If the distance exceeds the collision threshold, no collision
+        
         if (distance > collision) return {doesCollide: false, accuracy: 0};
-
-        // Calculate accuracy as a percentage
+        
         const accuracy = 1 - distance / collision;
 
         return {doesCollide: true, accuracy};
